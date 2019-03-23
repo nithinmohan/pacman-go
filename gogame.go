@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
-	// "github.com/faiface/pixel/imdraw"
+	"github.com/faiface/pixel/imdraw"
 	"fmt"
 	"image"
 	_ "image/png"
@@ -16,6 +16,7 @@ import (
 const(
 	WINDOW_HEIGHT = 800
 	WINDOW_WIDTH = 800
+	PACMAN_SPEED = .5
 )
 
 func getSheet(filePath string) (pixel.Picture, error) {
@@ -73,9 +74,9 @@ type board struct{
 	sheet pixel.Picture
 	blocks []*block
 }
-func (brd *board) load(worldMap [][]uint8) error{
+func (brd *board) load(worldMap [][]uint8, sheet pixel.Picture) error{
 	var err error
-	brd.sheet, err = getSheet("spritemap-384.png")
+	brd.sheet = sheet
 	if err != nil {
 		panic(err)
 	}
@@ -130,9 +131,9 @@ type world struct{
 	brd *board
 } 
 var World = &world{}
-func (pm *pacman) load() error {
+func (pm *pacman) load(sheet pixel.Picture) error {
 	var err error
-	pm.sheet, err = getSheet("spritemap-384.png")
+	pm.sheet = sheet
 	if err != nil {
 		panic(err)
 	}
@@ -175,10 +176,10 @@ func (pm *pacman) update(dt float64, directionValue Direction) {
 	pm.counter = dt //why dt is based on time
 	pm.direction = directionValue
 	directionVecMap := make(map[Direction]pixel.Vec)
-	directionVecMap[right] = pixel.V(20, 0)
-	directionVecMap[left] = pixel.V(-20, 0)
-	directionVecMap[up] = pixel.V(0, 20)
-	directionVecMap[down] = pixel.V(0, -20)
+	directionVecMap[right] = pixel.V(10*PACMAN_SPEED, 0)
+	directionVecMap[left] = pixel.V(-10*PACMAN_SPEED, 0)
+	directionVecMap[up] = pixel.V(0, 10*PACMAN_SPEED)
+	directionVecMap[down] = pixel.V(0, -10*PACMAN_SPEED)
 	pos_new := pm.pos.Moved(directionVecMap[directionValue])
 	if !World.brd.check_collision(pos_new){
 		pm.pos = pos_new
@@ -198,7 +199,7 @@ func run() {
 		panic(err)
 	}
 	// canvas := pixelgl.NewCanvas(pixel.R(-160/2, -120/2, 160/2, 120/2))
-	// imd := imdraw.New(nil)
+	
 
 	worldMap := [][]uint8{
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -222,14 +223,18 @@ func run() {
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
-
+	sheet, err:=getSheet("spritemap-384.png")
+	if err!=nil{
+		panic(err)
+	}
+	imd := imdraw.New(sheet)
 	brd := &board{}
-	err = brd.load(worldMap)
+	err = brd.load(worldMap, sheet)
 	if err != nil {
 		panic(err)
 	}
 	pm := &pacman{}
-	err = pm.load()
+	err = pm.load(sheet)
 	if err != nil {
 		panic(err)
 	}
@@ -241,8 +246,11 @@ func run() {
 	for !win.Closed() {
 		// pm.draw(win)
 		// imd.Draw(canvas)
+		// time.Sleep(100 * time.Millisecond)
 		dt := time.Since(last).Seconds()
+		
 		win.Clear(colornames.Black)
+		imd.Clear()
 
 		if win.Pressed(pixelgl.KeyLeft) {
 			direction = left
@@ -258,8 +266,9 @@ func run() {
 		}
 
 		pm.update(dt, direction)
-		pm.draw(win)
-		brd.draw(win)
+		pm.draw(imd)
+		brd.draw(imd)
+		imd.Draw(win)
 		// win.SetMatrix(pixel.IM.Scaled(pixel.ZV,
 		// 	math.Min(
 		// 		win.Bounds().W()/canvas.Bounds().W(),
