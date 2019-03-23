@@ -1,23 +1,28 @@
 package main
 
 import (
-	"github.com/faiface/pixel"
-	"github.com/faiface/pixel/pixelgl"
-	"github.com/faiface/pixel/imdraw"
 	"fmt"
 	"image"
 	_ "image/png"
 	"math"
+	"math/rand"
 	"os"
 	"time"
-	"math/rand"
-	// "image/color"
+
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
+	"github.com/faiface/pixel/pixelgl"
+	"strconv"
+
+	"github.com/faiface/pixel/text"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
 )
-const(
+
+const (
 	WINDOW_HEIGHT = 800
-	WINDOW_WIDTH = 800
-	PACMAN_SPEED = 2
+	WINDOW_WIDTH  = 800
+	PACMAN_SPEED  = 2
 )
 
 func getSheet(filePath string) (pixel.Picture, error) {
@@ -35,7 +40,6 @@ func getSheet(filePath string) (pixel.Picture, error) {
 	sheet := pixel.PictureDataFromImage(img)
 	return sheet, nil
 }
-
 func getFrame(frameWidth float64, frameHeight float64, xGrid int, yGrid int) pixel.Rect {
 	//https://github.com/faiface/pixel/wiki/Drawing-a-Sprite#picture
 
@@ -46,9 +50,13 @@ func getFrame(frameWidth float64, frameHeight float64, xGrid int, yGrid int) pix
 		float64(yGrid+1)*frameHeight,
 	)
 }
+func getRectInGrid(width float64, height float64, totalx int, totaly int, x int, y int) pixel.Rect {
+	gridWidth := width / float64(totalx)
+	gridHeight := height / float64(totaly)
+	return pixel.R(float64(x)*gridWidth, float64(y)*gridHeight, float64((x+1))*gridWidth, float64((y+1))*gridHeight)
+}
 
 type Direction int
-
 
 const (
 	up Direction = iota
@@ -56,12 +64,13 @@ const (
 	left
 	right
 )
-type block struct{
+
+type block struct {
 	frame pixel.Rect
-	pos pixel.Rect
+	pos   pixel.Rect
 	sheet pixel.Picture
 }
-func (blk *block) draw(t pixel.Target){
+func (blk block) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(blk.sheet, blk.frame)
 	sprite.Draw(t, pixel.IM.
@@ -72,12 +81,13 @@ func (blk *block) draw(t pixel.Target){
 		Moved(blk.pos.Center()),
 	)
 }
-type coin struct{
+
+type coin struct {
 	frame pixel.Rect
-	pos pixel.Rect
+	pos   pixel.Rect
 	sheet pixel.Picture
 }
-func (cn *coin) draw(t pixel.Target){
+func (cn coin) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(cn.sheet, cn.frame)
 	sprite.Draw(t, pixel.IM.
@@ -88,56 +98,35 @@ func (cn *coin) draw(t pixel.Target){
 		Moved(cn.pos.Center()),
 	)
 }
-type board struct{
+
+type board struct {
 	sheet pixel.Picture
-	blocks []*block
-	coins []*coin
 }
-func (brd *board) load(worldMap [][]uint8, sheet pixel.Picture) error{
+func (brd *board) load(worldMap [][]uint8, sheet pixel.Picture) error {
 	var err error
 	brd.sheet = sheet
 	if err != nil {
 		panic(err)
 	}
-	brd.blocks = make([]*block, 0)
+	return nil
+}
+func (brd *board) draw(t pixel.Target) error {
 	blkFrame := getFrame(24, 24, 0, 2)
 	coinFrame := getFrame(12, 12, 16, 19)
-	for i:=0;i<len(worldMap);i++{
-		for j:=0;j<len(worldMap[0]);j++{
-			if worldMap[i][j]==0{
-				brd.blocks = append(brd.blocks, &block{frame:blkFrame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(worldMap[0]), len(worldMap),j, i),sheet:brd.sheet} )	
-			}else{
-				brd.coins = append(brd.coins, &coin{frame: coinFrame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(worldMap[0]), len(worldMap),j, i),sheet:brd.sheet} )	
-				fmt.Println(getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(worldMap[0]), len(worldMap),j, i))
+	worldMap := World.worldMap
+	for i := 0; i < len(worldMap); i++ {
+		for j := 0; j < len(worldMap[0]); j++ {
+			if worldMap[i][j] == 0 {
+				block{frame: blkFrame, pos: getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(worldMap[0]), len(worldMap), j, i), sheet: brd.sheet}.draw(t)
+			} else if worldMap[i][j] == 1 {
+				coin{frame: coinFrame, pos: getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(worldMap[0]), len(worldMap), j, i), sheet: brd.sheet}.draw(t)
 			}
 		}
 	}
-	
-	// brd.blocks = append(brd.blocks, &block{frame:frame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT,20,20,2,3),sheet:brd.sheet} )
-	// brd.blocks = append(brd.blocks, &block{frame:frame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT,20,20,2,4),sheet:brd.sheet} )
-	// brd.blocks = append(brd.blocks, &block{frame:frame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT,20,20,2,5),sheet:brd.sheet} )
-	// brd.blocks = append(brd.blocks, &block{frame:frame, pos:getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT,20,20,3,5),sheet:brd.sheet} )
+	return nil
+}
 
-	return nil
-}
-func (brd *board) check_collision(pos pixel.Rect) bool{
-	for _, block := range brd.blocks{
-		if(isColliding(block.pos, pos)){
-			return true
-		}
-	}
-	return false
-}
-func (brd *board) draw(t pixel.Target) error{
-	for _, block := range brd.blocks{
-		block.draw(t)
-	}
-	for _, coin := range brd.coins{
-		coin.draw(t)
-	}
-	return nil
-}
-type ghost struct{
+type ghost struct {
 	direction Direction
 	anims     map[Direction][]pixel.Rect
 	rate      float64
@@ -145,8 +134,8 @@ type ghost struct{
 	frame     pixel.Rect    //stores current frame. updates in update function
 	sheet     pixel.Picture //stores spritesheel in pixel picture format
 	pos       pixel.Rect
-	gridX int
-	gridY int
+	gridX     int
+	gridY     int
 }
 func (gh *ghost) load(sheet pixel.Picture) error {
 	var err error
@@ -155,12 +144,10 @@ func (gh *ghost) load(sheet pixel.Picture) error {
 		panic(err)
 	}
 	gh.rate = 1 / 5.0
-	gh.gridX =2
-	gh.gridY=1
-	gh.pos = getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap),gh.gridX, gh.gridY)
+	gh.gridX = 2
+	gh.gridY = 1
+	gh.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	gh.direction = right
-	// gh.pos = pixel.R(560, 680, 600, 720)
-	// gh.pos = getRectInGrid()
 	gh.anims = make(map[Direction][]pixel.Rect)
 	gh.frame = getFrame(24, 24, 1, 6)
 	gh.anims[up] = append(gh.anims[up], getFrame(24, 24, 6, 0))
@@ -172,7 +159,6 @@ func (gh *ghost) load(sheet pixel.Picture) error {
 	gh.anims[right] = append(gh.anims[right], getFrame(24, 24, 0, 0))
 	gh.anims[right] = append(gh.anims[right], getFrame(24, 24, 1, 0))
 	return nil
-
 }
 func (gh *ghost) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
@@ -187,46 +173,46 @@ func (gh *ghost) draw(t pixel.Target) {
 }
 func (gh *ghost) update(dt float64) {
 	gh.counter = dt //why dt is based on time
- 	directionValue:= gh.direction 
+	directionValue := gh.direction
 	old_gridx := gh.gridX
 	old_gridy := gh.gridY
-	if directionValue==right{
-		gh.gridX+=1
+	if directionValue == right {
+		gh.gridX += 1
 	}
-	if directionValue==left{
-		gh.gridX-=1
+	if directionValue == left {
+		gh.gridX -= 1
 	}
-	if directionValue==up{
-		gh.gridY+=1
+	if directionValue == up {
+		gh.gridY += 1
 	}
-	if directionValue==down{
-		gh.gridY-=1
+	if directionValue == down {
+		gh.gridY -= 1
 	}
-	if gh.gridX<0||gh.gridX>=len(World.worldMap[0])||gh.gridY<0||gh.gridY>len(World.worldMap)||World.worldMap[gh.gridY][gh.gridX]==0{
+	if gh.gridX < 0 || gh.gridX >= len(World.worldMap[0]) || gh.gridY < 0 || gh.gridY > len(World.worldMap) || World.worldMap[gh.gridY][gh.gridX] == 0 {
 		gh.gridX = old_gridx
 		gh.gridY = old_gridy
 		possible := make([]Direction, 0)
-		if (World.worldMap[gh.gridY+1][gh.gridX]!=0){
+		if World.worldMap[gh.gridY+1][gh.gridX] != 0 {
 			possible = append(possible, up)
 		}
-		if (World.worldMap[gh.gridY-1][gh.gridX]!=0){
+		if World.worldMap[gh.gridY-1][gh.gridX] != 0 {
 			possible = append(possible, down)
 		}
-		if (World.worldMap[gh.gridY][gh.gridX+1]!=0){
+		if World.worldMap[gh.gridY][gh.gridX+1] != 0 {
 			possible = append(possible, right)
 		}
-		if (World.worldMap[gh.gridY][gh.gridX-1]!=0){
+		if World.worldMap[gh.gridY][gh.gridX-1] != 0 {
 			possible = append(possible, left)
 		}
-		fmt.Println(possible)
 		gh.direction = possible[rand.Intn(len(possible))]
 
-	}else{
-		gh.pos = getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap),gh.gridX, gh.gridY)
+	} else {
+		gh.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	}
 	i := int(math.Floor(gh.counter / gh.rate))
 	gh.frame = gh.anims[gh.direction][i%len(gh.anims[gh.direction])]
 }
+
 type pacman struct {
 	direction Direction
 	anims     map[Direction][]pixel.Rect
@@ -235,16 +221,10 @@ type pacman struct {
 	frame     pixel.Rect    //stores current frame. updates in update function
 	sheet     pixel.Picture //stores spritesheel in pixel picture format
 	pos       pixel.Rect
-	gridX int
-	gridY int
-	gridV pixel.Vec
+	gridX     int
+	gridY     int
 }
-type world struct{
-	pm *pacman
-	brd *board
-	worldMap [][]uint8
-} 
-var World = &world{}
+
 func (pm *pacman) load(sheet pixel.Picture) error {
 	var err error
 	pm.sheet = sheet
@@ -252,9 +232,9 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 		panic(err)
 	}
 	pm.rate = 1 / 5.0
-	pm.gridX =1
-	pm.gridY=1
-	pm.pos = getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap),pm.gridX, pm.gridY)
+	pm.gridX = 1
+	pm.gridY = 1
+	pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
 
 	// pm.pos = pixel.R(560, 680, 600, 720)
 	// pm.pos = getRectInGrid()
@@ -281,45 +261,55 @@ func (pm *pacman) draw(t pixel.Target) {
 		)).
 		Moved(pm.pos.Center()),
 	)
-	// sprite.Draw(t, pixel.IM)
-	// sprite := pixel.NewSprite(pm.sheet, pm.sheet.Bounds())
-	// sprite.Draw(t, pixel.IM)
-}
-func isColliding(rect1 pixel.Rect, rect2 pixel.Rect) bool{
-	if rect1.Min.X < rect2.Max.X && rect1.Max.X > rect2.Min.X && rect1.Min.Y < rect2.Max.Y && rect1.Max.Y > rect2.Min.Y {
-		return true
-	}
-	return false
-}
-func (pm *pacman) getNewPos(direction Direction){
-	
 }
 func (pm *pacman) update(dt float64, directionValue Direction) {
 	pm.counter = dt //why dt is based on time
 	pm.direction = directionValue
 	old_gridx := pm.gridX
 	old_gridy := pm.gridY
-	if directionValue==right{
-		pm.gridX+=1
+	if directionValue == right {
+		pm.gridX += 1
 	}
-	if directionValue==left{
-		pm.gridX-=1
+	if directionValue == left {
+		pm.gridX -= 1
 	}
-	if directionValue==up{
-		pm.gridY+=1
+	if directionValue == up {
+		pm.gridY += 1
 	}
-	if directionValue==down{
-		pm.gridY-=1
+	if directionValue == down {
+		pm.gridY -= 1
 	}
-	if pm.gridX<0||pm.gridX>=len(World.worldMap[0])||pm.gridY<0||pm.gridY>len(World.worldMap)||World.worldMap[pm.gridY][pm.gridX]==0{
+	if pm.gridX < 0 || pm.gridX >= len(World.worldMap[0]) || pm.gridY < 0 || pm.gridY > len(World.worldMap) || World.worldMap[pm.gridY][pm.gridX] == 0 {
 		pm.gridX = old_gridx
 		pm.gridY = old_gridy
-	}else{
-		pm.pos = getRectInGrid(WINDOW_WIDTH,WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap),pm.gridX, pm.gridY)
+	} else {
+		pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
+	}
+	for _, ghost := range World.ghosts {
+		if pm.gridX == ghost.gridX && pm.gridY == ghost.gridY {
+			World.gameOver = true
+		}
+	}
+	if World.worldMap[pm.gridY][pm.gridX] == 1 {
+		World.worldMap[pm.gridY][pm.gridX] = 2
+		fmt.Println(World.score)
+		World.score += 1
 	}
 	i := int(math.Floor(pm.counter / pm.rate))
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
+
+type world struct {
+	pm       *pacman
+	brd      *board
+	ghosts   []*ghost
+	worldMap [][]uint8
+	score    int
+	gameOver bool
+}
+var World = &world{}
+
+
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Packman",
@@ -331,7 +321,6 @@ func run() {
 		panic(err)
 	}
 	// canvas := pixelgl.NewCanvas(pixel.R(-160/2, -120/2, 160/2, 120/2))
-	
 
 	worldMap := [][]uint8{
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -356,8 +345,8 @@ func run() {
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	}
 	World.worldMap = worldMap
-	sheet, err:=getSheet("spritemap-384.png")
-	if err!=nil{
+	sheet, err := getSheet("spritemap-384.png")
+	if err != nil {
 		panic(err)
 	}
 	imd := imdraw.New(sheet)
@@ -394,18 +383,36 @@ func run() {
 	World.pm = pm
 	World.brd = brd
 	World.worldMap = worldMap
+	World.ghosts = []*ghost{gh1, gh2, gh3, gh4}
 	last := time.Now()
 
 	var direction Direction
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	for !win.Closed() {
 		// pm.draw(win)
 		// imd.Draw(canvas)
+		if World.gameOver == true {
+			basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+			fmt.Fprintln(basicTxt, "Game Over!!")
+			fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
+			win.Clear(colornames.Black)
+			basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
+			win.Update()
+			time.Sleep(5000 * time.Millisecond)
+			break
+		}
 		time.Sleep(100 * time.Millisecond)
 		dt := time.Since(last).Seconds()
-		
+
 		win.Clear(colornames.Black)
 		imd.Clear()
 
+		
+		basicTxt := text.New(pixel.V(500, 750), basicAtlas)
+		// fmt.Fprintln(basicTxt, "Game Over!!")
+		fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 3))
+		
 		if win.Pressed(pixelgl.KeyLeft) {
 			direction = left
 		}
@@ -430,24 +437,12 @@ func run() {
 		gh4.draw(imd)
 
 		pm.draw(imd)
-		
+
 		imd.Draw(win)
-		// win.SetMatrix(pixel.IM.Scaled(pixel.ZV,
-		// 	math.Min(
-		// 		win.Bounds().W()/canvas.Bounds().W(),
-		// 		win.Bounds().H()/canvas.Bounds().H(),
-		// 	),
-		// ).Moved(win.Bounds().Center()))
-		// canvas.Draw(win, pixel.IM.Moved(canvas.Bounds().Center()))
 		win.Update()
 	}
 }
 
-func getRectInGrid(width float64, height float64, totalx int, totaly int, x int, y int) pixel.Rect{
-	gridWidth := width/float64(totalx)
-	gridHeight := height/float64(totaly)
-	return pixel.R(float64(x)*gridWidth,float64(y)*gridHeight, float64((x+1))*gridWidth, float64((y+1))*gridHeight)
-}
 func main() {
 	pixelgl.Run(run)
 }
