@@ -2,12 +2,9 @@ package main
 
 import (
 	_ "image/png"
-	"time"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
-
-	"golang.org/x/image/colornames"
 )
 
 const (
@@ -15,7 +12,9 @@ const (
 	WINDOW_WIDTH  = 800
 )
 
-
+type world struct {
+}
+var World = &world{}
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Pacman",
@@ -26,6 +25,13 @@ func run() {
 	if err != nil {
 		panic(err)
 	}	
+
+	//load game objects
+
+	for !win.Closed() {
+		//update game objects
+		//draw game objects
+	}
 }
 
 func main() {
