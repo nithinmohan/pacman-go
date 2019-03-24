@@ -23,6 +23,7 @@ const (
 	WINDOW_HEIGHT = 800
 	WINDOW_WIDTH  = 800
 	PACMAN_SPEED  = 2
+	COIN_COUNT = 160
 )
 
 //Get Picture object from a img file
@@ -208,6 +209,9 @@ func (gh *ghost) update(dt float64) {
 	} else {
 		gh.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	}
+	if World.pm.gridX == gh.gridX && World.pm.gridY == gh.gridY {
+		World.gameOver = true
+	}
 	i := int(math.Floor(dt / gh.rate))
 	gh.frame = gh.anims[gh.direction][i%len(gh.anims[gh.direction])]
 }
@@ -379,7 +383,7 @@ func run() {
 	direction:=right
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	for !win.Closed() {
-		if World.gameOver == true {
+		if World.gameOver == true || World.score == COIN_COUNT{
 			basicTxt := text.New(pixel.V(100, 500), basicAtlas)
 			fmt.Fprintln(basicTxt, "Game Over!!")
 			fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
