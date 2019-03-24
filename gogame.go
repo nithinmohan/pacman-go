@@ -262,27 +262,36 @@ func (pm *pacman) draw(t pixel.Target) {
 		Moved(pm.pos.Center()),
 	)
 }
-func (pm *pacman) update(dt float64, directionValue Direction) {
+func (pm *pacman) getNewGridPos(direction Direction)(int, int){
+	if direction == right {
+		return pm.gridX+1, pm.gridY
+	}
+	if direction == left {
+		return pm.gridX-1, pm.gridY
+	}
+	if direction == up {
+		return pm.gridX, pm.gridY+1
+	}
+	if direction == down {
+		return pm.gridX, pm.gridY-1
+	}
+	return pm.gridX, pm.gridY
+}
+func (pm *pacman) update(dt float64, direction Direction) {
 	pm.counter = dt //why dt is based on time
-	pm.direction = directionValue
-	old_gridx := pm.gridX
-	old_gridy := pm.gridY
-	if directionValue == right {
-		pm.gridX += 1
-	}
-	if directionValue == left {
-		pm.gridX -= 1
-	}
-	if directionValue == up {
-		pm.gridY += 1
-	}
-	if directionValue == down {
-		pm.gridY -= 1
-	}
-	if pm.gridX < 0 || pm.gridX >= len(World.worldMap[0]) || pm.gridY < 0 || pm.gridY > len(World.worldMap) || World.worldMap[pm.gridY][pm.gridX] == 0 {
-		pm.gridX = old_gridx
-		pm.gridY = old_gridy
+	// pm.direction = direction
+	newGridX, newGridY := pm.getNewGridPos(direction)
+	if newGridX < 0 || newGridX >= len(World.worldMap[0]) || newGridY < 0 || newGridY > len(World.worldMap) || World.worldMap[newGridY][newGridX] == 0 {
+		newGridX, newGridY = pm.getNewGridPos(pm.direction)
+		if newGridX < 0 || newGridX >= len(World.worldMap[0]) || newGridY < 0 || newGridY > len(World.worldMap) || World.worldMap[newGridY][newGridX] == 0 {
+			// newGridX, newGridY = pm.getNewGridPos(pm.direction)
+		}else{
+			pm.gridX, pm.gridY = newGridX, newGridY
+			pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
+		}
 	} else {
+		pm.direction = direction
+		pm.gridX, pm.gridY = newGridX, newGridY
 		pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
 	}
 	for _, ghost := range World.ghosts {
@@ -293,7 +302,7 @@ func (pm *pacman) update(dt float64, directionValue Direction) {
 	if World.worldMap[pm.gridY][pm.gridX] == 1 {
 		World.worldMap[pm.gridY][pm.gridX] = 2
 		fmt.Println(World.score)
-		World.score += 1
+		World.score++
 	}
 	i := int(math.Floor(pm.counter / pm.rate))
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
@@ -389,8 +398,6 @@ func run() {
 	var direction Direction
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	for !win.Closed() {
-		// pm.draw(win)
-		// imd.Draw(canvas)
 		if World.gameOver == true {
 			basicTxt := text.New(pixel.V(100, 500), basicAtlas)
 			fmt.Fprintln(basicTxt, "Game Over!!")
@@ -398,7 +405,7 @@ func run() {
 			win.Clear(colornames.Black)
 			basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 			win.Update()
-			time.Sleep(5000 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -406,12 +413,6 @@ func run() {
 
 		win.Clear(colornames.Black)
 		imd.Clear()
-
-		
-		basicTxt := text.New(pixel.V(500, 750), basicAtlas)
-		// fmt.Fprintln(basicTxt, "Game Over!!")
-		fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
-		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 3))
 		
 		if win.Pressed(pixelgl.KeyLeft) {
 			direction = left
@@ -427,6 +428,7 @@ func run() {
 		}
 		brd.draw(imd)
 		pm.update(dt, direction)
+		pm.draw(imd)
 		gh1.update(dt)
 		gh1.draw(imd)
 		gh2.update(dt)
@@ -436,9 +438,12 @@ func run() {
 		gh4.update(dt)
 		gh4.draw(imd)
 
-		pm.draw(imd)
-
 		imd.Draw(win)
+
+		basicTxt := text.New(pixel.V(500, 750), basicAtlas)
+		fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 3))
+
 		win.Update()
 	}
 }
