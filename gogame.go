@@ -113,7 +113,7 @@ func (brd *board) load(sheet pixel.Picture) error {
 	return nil
 }
 func (brd *board) draw(t pixel.Target) error {
-	blkFrame := getFrame(24, 24, 0, 2)
+	blkFrame := getFrame(24, 24, 0, 5)
 	coinFrame := getFrame(12, 12, 16, 19)
 	worldMap := World.worldMap
 	for i := 0; i < len(worldMap); i++ {
