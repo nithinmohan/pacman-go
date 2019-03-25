@@ -70,35 +70,39 @@ const (
 
 type block struct {
 	frame pixel.Rect
-	pos   pixel.Rect
 	sheet pixel.Picture
+	gridX     int //position in grid
+	gridY     int //position in grid
 }
 func (blk block) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(blk.sheet, blk.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), blk.gridY, blk.gridX)
 	sprite.Draw(t, pixel.IM.
 		ScaledXY(pixel.ZV, pixel.V(
-			blk.pos.W()/sprite.Frame().W(),
-			blk.pos.H()/sprite.Frame().H(),
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
 		)).
-		Moved(blk.pos.Center()),
+		Moved(pos.Center()),
 	)
 }
 
 type coin struct {
 	frame pixel.Rect
-	pos   pixel.Rect
+	gridX int
+	gridY int
 	sheet pixel.Picture
 }
 func (cn coin) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(cn.sheet, cn.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), cn.gridY, cn.gridX)
 	sprite.Draw(t, pixel.IM.
 		ScaledXY(pixel.ZV, pixel.V(
-			cn.pos.W()/sprite.Frame().W(),
-			cn.pos.H()/sprite.Frame().H(),
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
 		)).
-		Moved(cn.pos.Center()),
+		Moved(pos.Center()),
 	)
 }
 
@@ -120,9 +124,10 @@ func (brd *board) draw(t pixel.Target) error {
 	for i := 0; i < len(worldMap); i++ {
 		for j := 0; j < len(worldMap[0]); j++ {
 			if worldMap[i][j] == 0 {
-				block{frame: blkFrame, pos: getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(worldMap[0]), len(worldMap), j, i), sheet: brd.sheet}.draw(t)
+				b:=block{frame: blkFrame, gridX:i, gridY:j, sheet:brd.sheet}
+				b.draw(t)
 			} else if worldMap[i][j] == 1 {
-				coin{frame: coinFrame, pos: getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(worldMap[0]), len(worldMap), j, i), sheet: brd.sheet}.draw(t)
+				coin{frame: coinFrame, gridX:i, gridY:j, sheet:brd.sheet}.draw(t)
 			}
 		}
 	}
@@ -135,7 +140,6 @@ type ghost struct {
 	rate      float64 //animation rate
 	frame     pixel.Rect    //stores current frame. updates in update function
 	sheet     pixel.Picture //stores spritesheel in pixel picture format
-	pos       pixel.Rect //stores position to draw the sprite
 	gridX     int //position in grid
 	gridY     int //position in grid
 	spriteRow int
@@ -147,7 +151,6 @@ func (gh *ghost) load(sheet pixel.Picture) error {
 	if err != nil {
 		panic(err)
 	}
-	gh.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	gh.direction = right
 	gh.anims = make(map[Direction][]pixel.Rect)
 	gh.frame = getFrame(24, 24, 1, 6)
@@ -164,12 +167,13 @@ func (gh *ghost) load(sheet pixel.Picture) error {
 func (gh *ghost) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(gh.sheet, gh.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	sprite.Draw(t, pixel.IM.
 		ScaledXY(pixel.ZV, pixel.V(
-			gh.pos.W()/sprite.Frame().W(),
-			gh.pos.H()/sprite.Frame().H(),
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
 		)).
-		Moved(gh.pos.Center()),
+		Moved(pos.Center()),
 	)
 }
 func (gh *ghost) update(dt float64) {
@@ -206,8 +210,6 @@ func (gh *ghost) update(dt float64) {
 		}
 		gh.direction = possible[rand.Intn(len(possible))]
 
-	} else {
-		gh.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
 	}
 	if World.pm.gridX == gh.gridX && World.pm.gridY == gh.gridY {
 		World.gameOver = true
@@ -222,7 +224,6 @@ type pacman struct {
 	rate      float64
 	frame     pixel.Rect    //stores current frame. updates in update function
 	sheet     pixel.Picture //stores spritesheel in pixel picture format
-	pos       pixel.Rect
 	gridX     int
 	gridY     int
 }
@@ -233,8 +234,6 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 	if err != nil {
 		panic(err)
 	}
-	pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
-
 	// pm.pos = pixel.R(560, 680, 600, 720)
 	// pm.pos = getRectInGrid()
 	pm.anims = make(map[Direction][]pixel.Rect)
@@ -253,12 +252,13 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 func (pm *pacman) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(pm.sheet, pm.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
 	sprite.Draw(t, pixel.IM.
 		ScaledXY(pixel.ZV, pixel.V(
-			pm.pos.W()/sprite.Frame().W(),
-			pm.pos.H()/sprite.Frame().H(),
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
 		)).
-		Moved(pm.pos.Center()),
+		Moved(pos.Center()),
 	)
 }
 func (pm *pacman) getNewGridPos(direction Direction)(int, int){
@@ -276,20 +276,19 @@ func (pm *pacman) getNewGridPos(direction Direction)(int, int){
 	}
 	return pm.gridX, pm.gridY
 }
+func (pm *pacman) isCollidingWithWall(gridX int, gridY int) bool{
+	return gridX < 0 || gridX >= len(World.worldMap[0]) || gridY < 0 || gridY > len(World.worldMap) || World.worldMap[gridY][gridX] == 0 
+}
 func (pm *pacman) update(dt float64, direction Direction) {
 	newGridX, newGridY := pm.getNewGridPos(direction)
-	if newGridX < 0 || newGridX >= len(World.worldMap[0]) || newGridY < 0 || newGridY > len(World.worldMap) || World.worldMap[newGridY][newGridX] == 0 {
+	if pm.isCollidingWithWall(newGridX, newGridY) {
 		newGridX, newGridY = pm.getNewGridPos(pm.direction)
-		if newGridX < 0 || newGridX >= len(World.worldMap[0]) || newGridY < 0 || newGridY > len(World.worldMap) || World.worldMap[newGridY][newGridX] == 0 {
-			// newGridX, newGridY = pm.getNewGridPos(pm.direction)
-		}else{
+		if !pm.isCollidingWithWall(newGridX, newGridY) {
 			pm.gridX, pm.gridY = newGridX, newGridY
-			pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
 		}
 	} else {
 		pm.direction = direction
 		pm.gridX, pm.gridY = newGridX, newGridY
-		pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), pm.gridX, pm.gridY)
 	}
 	for _, ghost := range World.ghosts {
 		if pm.gridX == ghost.gridX && pm.gridY == ghost.gridY {
