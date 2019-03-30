@@ -124,11 +124,6 @@ func (pm *pacman) update(dt float64, direction Direction) {
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
 
-type world struct {
-}
-
-var World = &world{}
-
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Pacman",
