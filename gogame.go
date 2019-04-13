@@ -141,12 +141,26 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+	direction:=right
 	last := time.Now()
 	for !win.Closed() {
 		win.Clear(colornames.Black)
 		//update game objects
+		if win.Pressed(pixelgl.KeyLeft) {
+			direction = left
+		}
+		if win.Pressed(pixelgl.KeyRight) {
+			direction = right
+		}
+		if win.Pressed(pixelgl.KeyUp) {
+			direction = up
+		}
+		if win.Pressed(pixelgl.KeyDown) {
+			direction = down
+		}
+
 		dt := time.Since(last).Seconds()
-		pm.update(dt, right)
+		pm.update(dt, direction)
 		pm.draw(win)
 		//draw game objects
 		win.Update()
