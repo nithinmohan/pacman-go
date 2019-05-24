@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"golang.org/x/image/colornames"
+	"github.com/faiface/pixel/imdraw"
 	"time"
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
@@ -57,6 +58,51 @@ func getRectInGrid(width float64, height float64, totalx int, totaly int, x int,
 	gridWidth := width / float64(totalx)
 	gridHeight := height / float64(totaly)
 	return pixel.R(float64(x)*gridWidth, float64(y)*gridHeight, float64((x+1))*gridWidth, float64((y+1))*gridHeight)
+}
+
+type block struct {
+	frame pixel.Rect
+	sheet pixel.Picture
+	gridX     int //position in grid
+	gridY     int //position in grid
+}
+
+type board struct {
+	sheet pixel.Picture
+}
+func (brd *board) load(sheet pixel.Picture) error {
+	var err error
+	brd.sheet = sheet
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+func (brd *board) draw(t pixel.Target) error {
+	blkFrame := getFrame(24, 24, 0, 5)
+	worldMap := World.worldMap
+	for i := 0; i < len(worldMap); i++ {
+		for j := 0; j < len(worldMap[0]); j++ {
+			if worldMap[i][j] == 0 {
+				b:=block{frame: blkFrame, gridX:i, gridY:j, sheet:brd.sheet}
+				b.draw(t)
+			}
+		}
+	}
+	return nil
+}
+
+func (blk block) draw(t pixel.Target) {
+	sprite := pixel.NewSprite(nil, pixel.Rect{})
+	sprite.Set(blk.sheet, blk.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), blk.gridY, blk.gridX)
+	sprite.Draw(t, pixel.IM.
+		ScaledXY(pixel.ZV, pixel.V(
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
+		)).
+		Moved(pos.Center()),
+	)
 }
 
 type pacman struct {
@@ -124,6 +170,19 @@ func (pm *pacman) update(dt float64, direction Direction) {
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
 
+type world struct {
+	pm       *pacman
+	brd      *board
+	worldMap [][]uint8
+	score    int
+	gameOver bool
+}
+type loadable interface{
+	load(pixel.Picture) error
+}
+
+var World = &world{}
+
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Pacman",
@@ -134,6 +193,31 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+
+	worldMap := [][]uint8{
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+		{0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+		{0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0},
+		{0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	}
+	World.worldMap = worldMap
+
 	sheet, err := getSheet("spritemap-384.png")
 	pm := &pacman{gridX:1,gridY:1,rate:1/5.0}
 	//load game objects
@@ -141,10 +225,26 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+	imd := imdraw.New(sheet)
+	brd := &board{}
+
+	objectsToLoad := []loadable{brd, pm}
+
+	for _, object:=range(objectsToLoad){
+		err = object.load(sheet)
+		if err != nil {
+			panic(err)
+		}
+	}
+	World.pm = pm
+	World.brd = brd
+	World.worldMap = worldMap
+
 	direction:=right
 	last := time.Now()
 	for !win.Closed() {
 		win.Clear(colornames.Black)
+		imd.Clear()
 		//update game objects
 		if win.Pressed(pixelgl.KeyLeft) {
 			direction = left
@@ -159,9 +259,12 @@ func run() {
 			direction = down
 		}
 
+		brd.draw(imd)
+
 		dt := time.Since(last).Seconds()
 		pm.update(dt, direction)
-		pm.draw(win)
+		pm.draw(imd)
+		imd.Draw(win)
 		//draw game objects
 		win.Update()
 		time.Sleep(100 * time.Millisecond)
