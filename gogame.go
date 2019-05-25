@@ -80,12 +80,15 @@ func (brd *board) load(sheet pixel.Picture) error {
 }
 func (brd *board) draw(t pixel.Target) error {
 	blkFrame := getFrame(24, 24, 0, 5)
+	coinFrame := getFrame(12, 12, 16, 19)
 	worldMap := World.worldMap
 	for i := 0; i < len(worldMap); i++ {
 		for j := 0; j < len(worldMap[0]); j++ {
 			if worldMap[i][j] == 0 {
 				b:=block{frame: blkFrame, gridX:i, gridY:j, sheet:brd.sheet}
 				b.draw(t)
+			}else if worldMap[i][j] == 1 {
+				coin{frame: coinFrame, gridX:i, gridY:j, sheet:brd.sheet}.draw(t)
 			}
 		}
 	}
@@ -104,7 +107,24 @@ func (blk block) draw(t pixel.Target) {
 		Moved(pos.Center()),
 	)
 }
-
+type coin struct {
+		frame pixel.Rect
+		gridX int
+		gridY int
+		sheet pixel.Picture
+}
+func (cn coin) draw(t pixel.Target) {
+		sprite := pixel.NewSprite(nil, pixel.Rect{})
+		sprite.Set(cn.sheet, cn.frame)
+		pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), cn.gridY, cn.gridX)
+		sprite.Draw(t, pixel.IM.
+				ScaledXY(pixel.ZV, pixel.V(
+						pos.W()/sprite.Frame().W(),
+						pos.H()/sprite.Frame().H(),
+				)).
+				Moved(pos.Center()),
+		)
+}
 type pacman struct {
 	direction Direction
 	anims     map[Direction][]pixel.Rect
@@ -263,7 +283,7 @@ func run() {
 
 		dt := time.Since(last).Seconds()
 		pm.update(dt, direction)
-		pm.draw(imd)
+		pm.draw(win)
 		imd.Draw(win)
 		//draw game objects
 		win.Update()
