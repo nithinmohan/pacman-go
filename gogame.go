@@ -131,7 +131,6 @@ type pacman struct {
 	rate      float64
 	frame     pixel.Rect    //stores current frame. updates in update function
 	sheet     pixel.Picture //stores spritesheel in pixel picture format
-	pos       pixel.Rect
 	gridX     int
 	gridY     int
 }
@@ -142,7 +141,6 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 	if err != nil {
 		panic(err)
 	}
-	pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, 20, 20, pm.gridX, pm.gridY)
 	pm.anims = make(map[Direction][]pixel.Rect)
 	pm.frame = getFrame(24, 24, 1, 6)
 	pm.anims[up] = append(pm.anims[up], getFrame(24, 24, 1, 6))
@@ -159,12 +157,13 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 func (pm *pacman) draw(t pixel.Target) {
 	sprite := pixel.NewSprite(nil, pixel.Rect{})
 	sprite.Set(pm.sheet, pm.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, 20, 20, pm.gridX, pm.gridY)
 	sprite.Draw(t, pixel.IM.
 		ScaledXY(pixel.ZV, pixel.V(
-			pm.pos.W()/sprite.Frame().W(),
-			pm.pos.H()/sprite.Frame().H(),
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
 		)).
-		Moved(pm.pos.Center()),
+		Moved(pos.Center()),
 	)
 }
 func (pm *pacman) getNewGridPos(direction Direction) (int, int) {
@@ -186,7 +185,6 @@ func (pm *pacman) update(dt float64, direction Direction) {
 	pm.direction = direction
 	pm.gridX, pm.gridY = pm.getNewGridPos(direction)
 	i := int(math.Floor(dt / pm.rate))
-	pm.pos = getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, 20,20, pm.gridX, pm.gridY)
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
 
