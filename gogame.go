@@ -181,9 +181,21 @@ func (pm *pacman) getNewGridPos(direction Direction) (int, int) {
 	}
 	return pm.gridX, pm.gridY
 }
+func (pm *pacman) isCollidingWithWall(gridX int, gridY int) bool{
+	return gridX < 0 || gridX >= len(World.worldMap[0]) || gridY < 0 || gridY > len(World.worldMap) || World.worldMap[gridY][gridX] == 0
+}
+
 func (pm *pacman) update(dt float64, direction Direction) {
-	pm.direction = direction
-	pm.gridX, pm.gridY = pm.getNewGridPos(direction)
+	newGridX, newGridY := pm.getNewGridPos(direction)
+    if pm.isCollidingWithWall(newGridX, newGridY) {
+        newGridX, newGridY = pm.getNewGridPos(pm.direction)
+        if !pm.isCollidingWithWall(newGridX, newGridY) {
+            pm.gridX, pm.gridY = newGridX, newGridY
+		}
+	} else {
+		pm.direction = direction
+		pm.gridX, pm.gridY = newGridX, newGridY
+	}
 	i := int(math.Floor(dt / pm.rate))
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
