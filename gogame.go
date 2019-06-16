@@ -11,6 +11,7 @@ import (
 	"time"
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
+	"math/rand"
 )
 
 const (
@@ -125,6 +126,91 @@ func (cn coin) draw(t pixel.Target) {
 				Moved(pos.Center()),
 		)
 }
+
+type ghost struct {
+	direction Direction //current direction of object
+	anims     map[Direction][]pixel.Rect //stores direction to frames list map
+	rate      float64 //animation rate
+	frame     pixel.Rect    //stores current frame. updates in update function
+	sheet     pixel.Picture //stores spritesheel in pixel picture format
+	gridX     int //position in grid
+	gridY     int //position in grid
+	spriteRow int
+	spriteCol int
+}
+func (gh *ghost) load(sheet pixel.Picture) error {
+	var err error
+	gh.sheet = sheet
+	if err != nil {
+		panic(err)
+	}
+	gh.direction = right
+	gh.anims = make(map[Direction][]pixel.Rect)
+	gh.frame = getFrame(24, 24, 1, 6)
+	gh.anims[up] = append(gh.anims[up], getFrame(24, 24, gh.spriteCol+6, gh.spriteRow))
+	gh.anims[up] = append(gh.anims[up], getFrame(24, 24, gh.spriteCol+7, gh.spriteRow))
+	gh.anims[down] = append(gh.anims[down], getFrame(24, 24, gh.spriteCol+2, gh.spriteRow))
+	gh.anims[down] = append(gh.anims[down], getFrame(24, 24, gh.spriteCol+3, gh.spriteRow))
+	gh.anims[left] = append(gh.anims[left], getFrame(24, 24, gh.spriteCol+4, gh.spriteRow))
+	gh.anims[left] = append(gh.anims[left], getFrame(24, 24, gh.spriteCol+5, gh.spriteRow))
+	gh.anims[right] = append(gh.anims[right], getFrame(24, 24, gh.spriteCol+0, gh.spriteRow))
+	gh.anims[right] = append(gh.anims[right], getFrame(24, 24, gh.spriteCol+1, gh.spriteRow))
+	return nil
+}
+func (gh *ghost) draw(t pixel.Target) {
+	sprite := pixel.NewSprite(nil, pixel.Rect{})
+	sprite.Set(gh.sheet, gh.frame)
+	pos := getRectInGrid(WINDOW_WIDTH, WINDOW_HEIGHT, len(World.worldMap[0]), len(World.worldMap), gh.gridX, gh.gridY)
+	sprite.Draw(t, pixel.IM.
+		ScaledXY(pixel.ZV, pixel.V(
+			pos.W()/sprite.Frame().W(),
+			pos.H()/sprite.Frame().H(),
+		)).
+		Moved(pos.Center()),
+	)
+}
+func (gh *ghost) update(dt float64) {
+	directionValue := gh.direction
+	old_gridx := gh.gridX
+	old_gridy := gh.gridY
+	if directionValue == right {
+		gh.gridX += 1
+	}
+	if directionValue == left {
+		gh.gridX -= 1
+	}
+	if directionValue == up {
+		gh.gridY += 1
+	}
+	if directionValue == down {
+		gh.gridY -= 1
+	}
+	if gh.gridX < 0 || gh.gridX >= len(World.worldMap[0]) || gh.gridY < 0 || gh.gridY > len(World.worldMap) || World.worldMap[gh.gridY][gh.gridX] == 0 {
+		gh.gridX = old_gridx
+		gh.gridY = old_gridy
+		possible := make([]Direction, 0)
+		if World.worldMap[gh.gridY+1][gh.gridX] != 0 {
+			possible = append(possible, up)
+		}
+		if World.worldMap[gh.gridY-1][gh.gridX] != 0 {
+			possible = append(possible, down)
+		}
+		if World.worldMap[gh.gridY][gh.gridX+1] != 0 {
+			possible = append(possible, right)
+		}
+		if World.worldMap[gh.gridY][gh.gridX-1] != 0 {
+			possible = append(possible, left)
+		}
+		gh.direction = possible[rand.Intn(len(possible))]
+
+	}
+	if World.pm.gridX == gh.gridX && World.pm.gridY == gh.gridY {
+		World.gameOver = true
+	}
+	i := int(math.Floor(dt / gh.rate))
+	gh.frame = gh.anims[gh.direction][i%len(gh.anims[gh.direction])]
+}
+
 type pacman struct {
 	direction Direction
 	anims     map[Direction][]pixel.Rect
@@ -203,6 +289,7 @@ func (pm *pacman) update(dt float64, direction Direction) {
 type world struct {
 	pm       *pacman
 	brd      *board
+	ghosts   []*ghost
 	worldMap [][]uint8
 	score    int
 	gameOver bool
@@ -250,6 +337,10 @@ func run() {
 
 	sheet, err := getSheet("spritemap-384.png")
 	pm := &pacman{gridX:1,gridY:1,rate:1/5.0}
+	gh1 := &ghost{gridX:5,gridY:10,rate:1/5.0,spriteRow:0, spriteCol:0}
+	gh2 := &ghost{gridX:15,gridY:14,rate:1/5.0,spriteRow:1, spriteCol:0}
+	gh3 := &ghost{gridX:8,gridY:3,rate:1/5.0,spriteRow:3, spriteCol:0}
+	gh4 := &ghost{gridX:2,gridY:9,rate:1/5.0,spriteRow:1, spriteCol:8}
 	//load game objects
 	err = pm.load(sheet)
 	if err != nil {
@@ -258,7 +349,7 @@ func run() {
 	imd := imdraw.New(sheet)
 	brd := &board{}
 
-	objectsToLoad := []loadable{brd, pm}
+	objectsToLoad := []loadable{brd, pm, gh1, gh2, gh3, gh4}
 
 	for _, object:=range(objectsToLoad){
 		err = object.load(sheet)
@@ -268,6 +359,7 @@ func run() {
 	}
 	World.pm = pm
 	World.brd = brd
+	World.ghosts = []*ghost{gh1, gh2, gh3, gh4}
 	World.worldMap = worldMap
 
 	direction:=right
@@ -294,6 +386,10 @@ func run() {
 		dt := time.Since(last).Seconds()
 		pm.update(dt, direction)
 		pm.draw(win)
+		for _,gh :=range(World.ghosts){
+			gh.update(dt)
+			gh.draw(imd)
+		}
 		imd.Draw(win)
 		//draw game objects
 		win.Update()
