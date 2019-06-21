@@ -12,11 +12,15 @@ import (
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 	"math/rand"
+	"github.com/faiface/pixel/text"
+	"golang.org/x/image/font/basicfont"
+	"strconv"
 )
 
 const (
 	WINDOW_HEIGHT = 800
 	WINDOW_WIDTH  = 800
+	COIN_COUNT = 160
 )
 
 type Direction int
@@ -282,6 +286,16 @@ func (pm *pacman) update(dt float64, direction Direction) {
 		pm.direction = direction
 		pm.gridX, pm.gridY = newGridX, newGridY
 	}
+	for _, ghost := range World.ghosts {
+		if pm.gridX == ghost.gridX && pm.gridY == ghost.gridY {
+			World.gameOver = true
+		}
+	}
+	if World.worldMap[pm.gridY][pm.gridX] == 1 {
+		World.worldMap[pm.gridY][pm.gridX] = 2
+		fmt.Println(World.score)
+		World.score++
+	}
 	i := int(math.Floor(dt / pm.rate))
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
 }
@@ -364,7 +378,19 @@ func run() {
 
 	direction:=right
 	last := time.Now()
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	for !win.Closed() {
+		if World.gameOver == true || World.score == COIN_COUNT{
+			basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+			fmt.Fprintln(basicTxt, "Game Over!!")
+			fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
+			win.Clear(colornames.Black)
+			basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
+			win.Update()
+			time.Sleep(1000 * time.Millisecond)
+			break
+		}
+
 		win.Clear(colornames.Black)
 		imd.Clear()
 		//update game objects
@@ -391,8 +417,12 @@ func run() {
 			gh.draw(imd)
 		}
 		imd.Draw(win)
-		//draw game objects
+	
+		basicTxt := text.New(pixel.V(500, 750), basicAtlas)
+		fmt.Fprintln(basicTxt, "Score:"+strconv.Itoa(World.score))
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 3))
 		win.Update()
+		
 		time.Sleep(100 * time.Millisecond)
 	}
 }
