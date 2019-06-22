@@ -75,7 +75,10 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 	if err != nil {
 		panic(err)
 	}
+	//Map of all frames to be showed per direction of pacman
+  	//we will use this for the animation
 	pm.anims = make(map[Direction][]pixel.Rect)
+	//here 1,6 is the cordinates of image to be shown, after dividing the sprite sheet to 24x24
 	pm.anims[up] = append(pm.anims[up], getFrame(24, 24, 1, 6))
 	pm.anims[up] = append(pm.anims[up], getFrame(24, 24, 3, 6))
 	pm.anims[down] = append(pm.anims[down], getFrame(24, 24, 5, 6))
@@ -166,5 +169,5 @@ func run() {
 }
 
 func main() {
-	pixelgl.Run(run)
+	pixelgl.Run(run) 
 }
