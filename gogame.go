@@ -232,7 +232,6 @@ func (pm *pacman) load(sheet pixel.Picture) error {
 		panic(err)
 	}
 	pm.anims = make(map[Direction][]pixel.Rect)
-	pm.frame = getFrame(24, 24, 1, 6)
 	pm.anims[up] = append(pm.anims[up], getFrame(24, 24, 1, 6))
 	pm.anims[up] = append(pm.anims[up], getFrame(24, 24, 3, 6))
 	pm.anims[down] = append(pm.anims[down], getFrame(24, 24, 5, 6))
