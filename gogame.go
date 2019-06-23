@@ -315,8 +315,6 @@ type world struct {
 	brd      *board
 	ghosts   []*ghost
 	worldMap [][]uint8
-	score    int
-	gameOver bool
 }
 type loadable interface{
 	load(pixel.Picture) error
