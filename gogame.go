@@ -189,10 +189,12 @@ func (gh *ghost) update(dt float64) {
 	if directionValue == down {
 		gh.gridY -= 1
 	}
+	//cbeck for collision with block
 	if gh.gridX < 0 || gh.gridX >= len(World.worldMap[0]) || gh.gridY < 0 || gh.gridY > len(World.worldMap) || World.worldMap[gh.gridY][gh.gridX] == 0 {
 		gh.gridX = old_gridx
 		gh.gridY = old_gridy
 		possible := make([]Direction, 0)
+		//find list of possible direction where ghost can move
 		if World.worldMap[gh.gridY+1][gh.gridX] != 0 {
 			possible = append(possible, up)
 		}
@@ -205,11 +207,9 @@ func (gh *ghost) update(dt float64) {
 		if World.worldMap[gh.gridY][gh.gridX-1] != 0 {
 			possible = append(possible, left)
 		}
+		//select one direction out of it
 		gh.direction = possible[rand.Intn(len(possible))]
 
-	}
-	if World.pm.gridX == gh.gridX && World.pm.gridY == gh.gridY {
-		World.gameOver = true
 	}
 	i := int(math.Floor(dt / gh.rate))
 	gh.frame = gh.anims[gh.direction][i%len(gh.anims[gh.direction])]
