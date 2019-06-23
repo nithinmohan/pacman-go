@@ -274,15 +274,20 @@ func (pm *pacman) isCollidingWithWall(gridX int, gridY int) bool{
 }
 
 func (pm *pacman) update(dt float64, direction Direction) {
+	//get the new position according to the direction passed
 	newGridX, newGridY := pm.getNewGridPos(direction)
-    if pm.isCollidingWithWall(newGridX, newGridY) {
-        newGridX, newGridY = pm.getNewGridPos(pm.direction)
+    if !pm.isCollidingWithWall(newGridX, newGridY) {
+		//If newly calculated position is not colliding with block
+		//update the direction and position
+		pm.direction = direction
+		pm.gridX, pm.gridY = newGridX, newGridY
+        
+	} else {
+		//if the position is colliding, try with existing direction
+		newGridX, newGridY = pm.getNewGridPos(pm.direction)
         if !pm.isCollidingWithWall(newGridX, newGridY) {
             pm.gridX, pm.gridY = newGridX, newGridY
 		}
-	} else {
-		pm.direction = direction
-		pm.gridX, pm.gridY = newGridX, newGridY
 	}
 	i := int(math.Floor(dt / pm.rate))
 	pm.frame = pm.anims[pm.direction][i%len(pm.anims[pm.direction])]
