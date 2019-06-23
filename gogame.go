@@ -194,8 +194,6 @@ type world struct {
 	pm       *pacman
 	brd      *board
 	worldMap [][]uint8
-	score    int
-	gameOver bool
 }
 type loadable interface{
 	load(pixel.Picture) error
