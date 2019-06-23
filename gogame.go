@@ -211,6 +211,9 @@ func (gh *ghost) update(dt float64) {
 		gh.direction = possible[rand.Intn(len(possible))]
 
 	}
+	if World.pm.gridX == gh.gridX && World.pm.gridY == gh.gridY {
+		World.gameOver = true
+	}
 	i := int(math.Floor(dt / gh.rate))
 	gh.frame = gh.anims[gh.direction][i%len(gh.anims[gh.direction])]
 }
